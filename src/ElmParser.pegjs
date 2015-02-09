@@ -2,7 +2,7 @@
  * Elm Grammar
  * ============
  */
-start = operatorPrecedenceDeclaration
+start = program
 
 /*
  * Rule : program
