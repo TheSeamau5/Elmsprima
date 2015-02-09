@@ -49,6 +49,8 @@ statement
   = singleLineComment
   / moduleStatement
   / importStatement
+  / portAnnotation
+  / portDefinition
   / operatorPrecedenceDeclaration
   / typeDefinition
   / fullVariableDefinition
@@ -316,6 +318,22 @@ fullVariableDefinition
   }
   / variableDefinition
 
+
+portDefinition
+ = "port" whitespace value: variableDefinition {
+      return {
+        type : "PortDefinition",
+        value : value
+      };
+ }
+
+portAnnotation
+ = "port" whitespace value: typeAnnotationDeclaration {
+      return {
+        type : "PortAnnotation",
+        value : value
+      };
+ }
 
 // TODO: Modify this to also take into account pattern-matching in arguments
 /*
