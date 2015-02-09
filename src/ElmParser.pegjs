@@ -16,7 +16,7 @@ start = program
  * Output : { type : "Program", value : Array `program` }
  */
 program
-  = program: spaceSeparatedStatements? {
+  = space* program: spaceSeparatedStatements? space* {
      return {
        type : "Program",
        value : program ? program : []
@@ -46,11 +46,62 @@ program
  *    4. `expression`
  */
 statement
-  = operatorPrecedenceDeclaration
+  = moduleStatement
+  / importStatement
+  / operatorPrecedenceDeclaration
   / typeDefinition
   / fullVariableDefinition
   / expression
 
+
+
+moduleStatement
+  = "module" whitespace moduleName: validModuleName space* exportList: (exportList space*)? "where" {
+      return {
+        type : "ModuleStatement",
+        value : {
+          name : moduleName,
+          exports : exportList ? exportList[0] : []
+        }
+      };
+  }
+
+exportList
+  = "(" space* exportList: commaSeparatedExports space* ")" {
+      return exportList;
+  }
+
+importStatement
+  = "import" whitespace moduleName: validModuleName whitespace "as" whitespace qualification: validModuleName {
+      return {
+        type : "QualifiedImportStatement",
+        value : {
+          name : moduleName,
+          qualification : qualification
+        }
+      };
+  }
+  / "import" whitespace moduleName: validModuleName whitespace "(..)" {
+      return {
+        type : "AllOpenImportStatement",
+        value : moduleName
+      };
+  }
+  / "import" whitespace moduleName: validModuleName whitespace space* "(" space* importList: commaSeparatedImports space* ")" {
+      return {
+        type : "SelectiveOpenImportStatement",
+        value : {
+          name : moduleName,
+          imports : importList
+        }
+      };
+  }
+  / "import" whitespace moduleName: validModuleName {
+      return {
+        type : "SelfQualifiedImportStatement",
+        value : moduleName
+      };
+  }
 
 /*
  * =================================
@@ -391,6 +442,7 @@ ifThenElseExpression
 literal
   = lambda
   / guardedLiteral
+  / guardedExpression
   / record
   / list
   / number
@@ -638,6 +690,56 @@ validFunctionName
   / validTypeName
   / guardedInfixOperator
 
+validModuleName
+  = names: dotSeparatedValidTypeNames {
+      return names.join(".");
+  }
+
+validExport
+  = mainExport: validTypeName space* "(" space* selectedExports: commaSeparatedTypeNames space* ")" {
+      return {
+        type : "SelectiveExport",
+        value : {
+          mainExport : mainExport,
+          selectedExports : selectedExports
+        }
+      };
+  }
+  / exportName: validTypeName space* "(" space* ".." space* ")" {
+      return {
+        type : "AllExport",
+        value : exportName
+      };
+  }
+  / exportName: validFunctionName {
+      return {
+        type : "SingleExport",
+        value : exportName
+      };
+  }
+
+validImport
+  = mainImport: validTypeName space* "(" space* selectedImports: commaSeparatedTypeNames space* ")" {
+      return {
+        type : "SelectiveImport",
+        value : {
+          mainImport : mainImport,
+          selectedImports : selectedImports
+        }
+      };
+  }
+  / importName: validTypeName space* "(" space* ".." space* ")" {
+      return {
+        type : "AllImport",
+        value : importName
+      };
+  }
+  / importName: validFunctionName {
+      return {
+        type : "SingleImport",
+        value : importName
+      };
+  }
 
 
 /* Types */
@@ -876,6 +978,37 @@ commaSeparatedRecordOperations
       return [rest];
   }
 
+commaSeparatedExports
+  = first: validExport space* "," space* rest: commaSeparatedExports {
+      return [first].concat(rest);
+  }
+  / rest: validExport {
+      return [rest];
+  }
+
+commaSeparatedImports
+  = first: validImport space* "," space* rest: commaSeparatedImports {
+      return [first].concat(rest);
+  }
+  / rest: validImport {
+      return [rest];
+  }
+
+commaSeparatedTypeNames
+  = first: validTypeName space* "," space* rest: commaSeparatedTypeNames {
+      return [first].concat(rest);
+  }
+  / rest: validTypeName {
+      return [rest];
+  }
+
+dotSeparatedValidTypeNames
+  = first: validTypeName "." rest: dotSeparatedValidTypeNames {
+      return [first].concat(rest);
+  }
+  / rest: validTypeName {
+      return [rest];
+  }
 
 /*
  * ================
