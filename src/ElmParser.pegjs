@@ -551,7 +551,7 @@ number
   = float: float {
       return {
         type : "FloatLiteral",
-        value : parseFloat(float)
+        value : float
       };
   }
   / integer: integer {
@@ -628,8 +628,12 @@ integer
   }
 
 float
-  = digit "." digit+
-  / integer "." digit+
+  = first: digit "." rest: digit+ {
+      return parseFloat([first].concat(["."]).concat(rest).join(""));
+  }
+  / first: integer "." rest: digit+ {
+      return parseFloat([first].concat(["."]).concat(rest).join(""));
+  }
 
 /* Symbols */
 symbolIncludingReserved
