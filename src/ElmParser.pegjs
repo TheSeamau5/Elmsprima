@@ -46,13 +46,22 @@ program
  *    4. `expression`
  */
 statement
-  = moduleStatement
+  = singleLineComment
+  / moduleStatement
   / importStatement
   / operatorPrecedenceDeclaration
   / typeDefinition
   / fullVariableDefinition
   / expression
 
+
+singleLineComment
+  = "--" commentContent: [^\n]* {
+      return {
+        type : "SingleLineComment",
+        value : commentContent ? commentContent.join("") : ""
+      };
+  }
 
 
 moduleStatement
