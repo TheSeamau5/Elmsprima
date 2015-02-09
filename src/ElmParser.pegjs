@@ -53,6 +53,62 @@ statement
 
 
 /*
+ * =================================
+ *  Operator Precedence Declaration
+ * =================================
+ */
+
+/*
+ * Rule : operatorPrecedenceDeclaration
+ *
+ * Description :
+ *    This is a `statement` used to declate the associativity and
+ *    precedence level of a user-defined infix operator
+ *
+ *    Examples :
+ *        1. infixl 9 <<
+ *        2. infixr 9 >>
+ *        3. infixr 0 <|
+ *        4. infixl 0 |>
+ *
+ * Definition :
+ *    Either "infixr" or "infixl" followed by an `integer` followed by an
+ *    `infixOperator`, all of which are interspersed with `whitespace`
+ *
+ * Output :
+ *    { type : "OperatorPrecedenceDeclaration"
+ *    , value :
+ *        { level : `integer`
+ *        , operator : `infixOperator`
+ *        , associativity : Either "left" or "right"
+ *        }
+ *    }
+ */
+operatorPrecedenceDeclaration
+  = "infixr" whitespace level: integer  whitespace operator:infixOperator {
+      return {
+        type : "OperatorPrecedenceDeclaration",
+        value: {
+          level : level,
+          operator : operator,
+          associativity : "right"
+        }
+      };
+  }
+  / "infixl" whitespace level: integer  whitespace operator: infixOperator {
+      return {
+        type : "OperatorPrecedenceDeclaration",
+        value: {
+          level : level,
+          operator : operator,
+          associativity : "left"
+        }
+      };
+  }
+
+
+
+/*
  * =============
  *  Definitions
  * =============
@@ -301,27 +357,7 @@ binaryOperation
   / literal
 
 
-operatorPrecedenceDeclaration
-  = "infixr" whitespace level: integer  whitespace operator:infixOperator {
-      return {
-        type : "OperatorPrecedenceDeclaration",
-        value: {
-          level : level,
-          operator : operator,
-          associativity : "right"
-        }
-      };
-  }
-  / "infixl" whitespace level: integer  whitespace operator: infixOperator {
-      return {
-        type : "OperatorPrecedenceDeclaration",
-        value: {
-          level : level,
-          operator : operator,
-          associativity : "left"
-        }
-      };
-  }
+
 
 /* CONDITIONALS */
 ifThenElseExpression
