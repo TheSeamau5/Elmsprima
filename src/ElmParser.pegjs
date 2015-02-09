@@ -218,6 +218,83 @@ typeAliasDefinition
   }
 
 
+/*
+ * Rule : fullVariableDefinition
+ *
+ * Description :
+ *   A variable of function definition, optionally accompanied by a type annotation
+ *
+ *    Examples :
+ *        1. x : Int
+ *           x = 2
+ *
+ *        2. square : Float -> Float
+ *           square x = x * x
+ *
+ *        3. (<<) : (b -> c) -> (a -> b) -> a -> c
+ *           (<<) f g x = f (g x)
+ *
+ *        4. helloworld = "HelloWorld"
+ *
+ * Definition : Either
+ *    1. `typeAnnotationDeclaration` followed by some `space` followed by a `variableDefinition`
+ *    2. `variableDefinition`
+ *
+ * Output : Either
+ *    1. { type : "FullVariableDefinition", value : { annotation : `typeAnnotationDeclaration`, definition : `variableDefinition`}}
+ *    2. `variableDefinition`
+ */
+fullVariableDefinition
+  = annotation: typeAnnotationDeclaration space* definition: variableDefinition {
+      return {
+        type : "FullVariableDefinition",
+        value : {
+          annotation : annotation,
+          definition : definition
+        }
+      };
+  }
+  / variableDefinition
+
+
+
+// TODO: Modify this to also take into account pattern-matching in arguments
+/*
+ * Rule : variableDefinition
+ *
+ * Description :
+ *   A variable or function definition. Optionally may have arguments.
+ *
+ *   Examples :
+ *      1. x = 1
+ *      2. square x = x * x
+ *      3. (<<) f g x = f (g x)
+ *
+ * Definition :
+ *   A `validVariableName` followed by zero or one `spaceSeparatedVariables`
+ *   followed by "=" followed by an `expression`, all of which interspersed
+ *   with some `space`
+ *
+ * Output :
+ *   { type : "VariableDefinition"
+ *   , value :
+ *       { variable : `validVariableName`
+ *       , arguments : Array `validVariableName`
+ *       , definition : `expression`
+ *       }
+ *   }
+ */
+variableDefinition
+  = variable: validVariableName space* args: spaceSeparatedVariables? space* "=" space* definition: expression {
+      return {
+        type : "VariableDefinition",
+        value : {
+          variable : variable,
+          arguments : args ? args : [],
+          definition : definition
+        }
+      };
+  }
 
 
 
@@ -556,29 +633,7 @@ expression
   / literal
 
 
-variableDefinition
-  = variable: validVariableName space* args: spaceSeparatedVariables? space* "=" space* definition: expression {
-      return {
-        type : "VariableDefinition",
-        value : {
-          variable : variable,
-          arguments : args ? args : [],
-          definition : definition
-        }
-      };
-  }
 
-fullVariableDefinition
-  = annotation: typeAnnotationDeclaration space* definition: variableDefinition {
-      return {
-        type : "FullVariableDefinition",
-        value : {
-          annotation : annotation,
-          definition : definition
-        }
-      };
-  }
-  / variableDefinition
 
 
 /* TYPES */
