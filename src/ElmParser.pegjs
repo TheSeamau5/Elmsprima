@@ -257,7 +257,6 @@ fullVariableDefinition
   / variableDefinition
 
 
-
 // TODO: Modify this to also take into account pattern-matching in arguments
 /*
  * Rule : variableDefinition
@@ -297,6 +296,93 @@ variableDefinition
   }
 
 
+
+
+
+/*
+ * =============
+ *  Expressions
+ * =============
+ */
+
+expression
+  = letInExpression
+  / functionCall
+  / guardedExpression
+  / binaryOperation
+  / caseExpression
+  / multiWayIfExpression
+  / ifThenElseExpression
+  / literal
+
+letInExpression
+  = "let" space* variables: spaceSeparatedVariableDefinitions space* "in" space* result: expression {
+      return {
+        type : "LetInExpression",
+        value : {
+          variables: variables,
+          result : result
+        }
+      };
+  }
+
+functionCall
+  = func: (validFunctionName / guardedExpression) space* args: spaceSeparatedLiterals {
+      return {
+        type : "FunctionCall",
+        value : {
+          func : func,
+          arguments : args
+        }
+      };
+  }
+
+guardedExpression
+  = "(" space* expression: expression space* ")" { return expression; }
+
+binaryOperation
+  = left: literal whitespace* operator: (infixOperator / infixFunction) whitespace* right: binaryOperation {
+      return {
+        type : "BinaryOperation",
+        value : {
+          left : left,
+          operator : operator,
+          right : right
+        }
+      };
+  }
+  / literal
+
+caseExpression
+  = "case" whitespace* test: expression whitespace* "of" whitespace* patterns: newLineSeparatedPatterns {
+      return {
+        type : "CaseExpression",
+        value : {
+          test : test,
+          patterns : patterns
+        }
+      };
+  }
+
+multiWayIfExpression
+  = "if" whitespace* conditions: barSeparatedConditionalExpressions {
+      return {
+        type : "MultiWayIfExpression",
+        value : conditions
+      };
+  }
+
+ifThenElseExpression
+  = "if" whitespace* predicate: expression whitespace* "then" whitespace* thenBranch: expression whitespace* "else" whitespace* elseBranch: expression {
+      return {
+        type : "IfThenElseExpression",
+        value : {
+          predicate : predicate,
+          thenBranch : thenBranch,
+          elseBranch : elseBranch
+        }
+      };
+  }
 
 /* Letters */
 lowerCaseLetter
@@ -420,65 +506,12 @@ infixFunction
       };
   }
 
-binaryOperation
-  = left: literal whitespace* operator: (infixOperator / infixFunction) whitespace* right: binaryOperation {
-      return {
-        type : "BinaryOperation",
-        value : {
-          left : left,
-          operator : operator,
-          right : right
-        }
-      };
-  }
-  / literal
 
 
 
 
-/* CONDITIONALS */
-ifThenElseExpression
-  = "if" whitespace* predicate: expression whitespace* "then" whitespace* thenBranch: expression whitespace* "else" whitespace* elseBranch: expression {
-      return {
-        type : "IfThenElseExpression",
-        value : {
-          predicate : predicate,
-          thenBranch : thenBranch,
-          elseBranch : elseBranch
-        }
-      };
-  }
 
-multiWayIfExpression
-  = "if" whitespace* conditions: barSeparatedConditionalExpressions {
-      return {
-        type : "MultiWayIfExpression",
-        value : conditions
-      };
-  }
 
-caseExpression
-  = "case" whitespace* test: expression whitespace* "of" whitespace* patterns: newLineSeparatedPatterns {
-      return {
-        type : "CaseExpression",
-        value : {
-          test : test,
-          patterns : patterns
-        }
-      };
-  }
-
-/* LET IN EXPRESSION */
-letInExpression
-  = "let" space* variables: spaceSeparatedVariableDefinitions space* "in" space* result: expression {
-      return {
-        type : "LetInExpression",
-        value : {
-          variables: variables,
-          result : result
-        }
-      };
-  }
 
 /* IDENTIFIERS */
 validTypeName
@@ -590,19 +623,7 @@ lambda
   }
 
 
-functionCall
-  = func: (validFunctionName / guardedExpression) space* args: spaceSeparatedLiterals {
-      return {
-        type : "FunctionCall",
-        value : {
-          func : func,
-          arguments : args
-        }
-      };
-  }
 
-guardedFunctionCall
- = "(" space* func: functionCall space* ")" {return func;}
 
 guardedLiteral
   = "(" whitespace* literal: literal whitespace* ")" { return literal; }
@@ -619,18 +640,6 @@ literal
   / typeConstructorIdentifier
   / tuple
 
-guardedExpression
-  = "(" space* expression: expression space* ")" { return expression; }
-
-expression
-  = letInExpression
-  / functionCall
-  / guardedExpression
-  / binaryOperation
-  / caseExpression
-  / multiWayIfExpression
-  / ifThenElseExpression
-  / literal
 
 
 
