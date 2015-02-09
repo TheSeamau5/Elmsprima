@@ -299,11 +299,7 @@ variableDefinition
 
 
 
-/*
- * =============
- *  Expressions
- * =============
- */
+
 
 expression
   = letInExpression
@@ -384,6 +380,156 @@ ifThenElseExpression
       };
   }
 
+
+
+/*
+ * ==========
+ *  Literals
+ * ==========
+ */
+
+literal
+  = lambda
+  / guardedLiteral
+  / record
+  / list
+  / number
+  / string
+  / char
+  / variableIdentifier
+  / typeConstructorIdentifier
+  / tuple
+
+lambda
+  = "(" space* "\\" args: spaceSeparatedVariables? space* "->" space* definition: expression {
+      return {
+        type : "LambdaExpression",
+        value : {
+          arguments : args ? args : [],
+          definition : definition
+        }
+      };
+  }
+
+guardedLiteral
+  = "(" whitespace* literal: literal whitespace* ")" { return literal; }
+
+record
+  = "{" space* base: (validVariableName whitespace* "|")? space* operations: commaSeparatedRecordOperations? space* "}" {
+      return {
+        type : "RecordLiteral",
+        value : {
+          base : base ? base[0] : {},
+          operations : operations ? operations : []
+        }
+      };
+  }
+
+recordOperation
+  = key: validVariableName space* "=" space* value: expression {
+      return {
+        type : "AssignRecordOperation",
+        value : {
+          key : key,
+          value : value
+        }
+      };
+  }
+  / key: validVariableName space* "<-" space* value: expression {
+      return {
+        type : "UpdateRecordOperation",
+        value : {
+          key : key,
+          value : value
+        }
+      };
+  }
+
+list
+  = rangeList
+  / classicalList
+
+rangeList
+  = "[" whitespace* start: expression whitespace* ".." whitespace* end: expression whitespace* "]" {
+      return {
+        type : "RangeListLiteral",
+        value : {
+          start : start,
+          end : end
+        }
+      };
+  }
+
+classicalList
+  = "[" whitespace* list: commaSeparatedExpressions? whitespace* "]" {
+      return {
+        type : "ListLiteral",
+        value : list ? list : []
+      };
+  }
+
+number
+  = float: float {
+      return {
+        type : "FloatLiteral",
+        value : parseFloat(float)
+      };
+  }
+  / integer: integer {
+      return {
+        type : "IntegerLiteral",
+        value : integer
+      };
+  }
+
+string
+  = string: doubleQuotedString {
+      return {
+        type : "StringLiteral",
+        value : string
+      };
+  }
+
+char
+  = char: singleQuotedChar {
+      return {
+        type : "CharLiteral",
+        value : char
+      };
+  }
+
+variableIdentifier
+  = variable: validVariableName {
+      return {
+        type : "VariableIdentifier",
+        value : variable
+      };
+  }
+
+typeConstructorIdentifier
+  = typeConstructor: validTypeName {
+      return {
+        type : "TypeConstructorIdentifier",
+        value : typeConstructor
+      };
+  }
+
+tuple
+  = "(" whitespace* tuple: commaSeparatedExpressions? whitespace* ")" {
+      return {
+        type : "TupleLiteral",
+        value : tuple ? tuple : []
+      };
+  }
+
+
+/*
+ * ===============
+ *  Simple Tokens
+ * ===============
+ */
+
+
 /* Letters */
 lowerCaseLetter
   = [a-z]
@@ -397,20 +543,6 @@ letter
 digit
   = [0-9]
 
-symbolIncludingReserved
-  = [^0-9a-zA-Z,.-:= \n]
-
-symbol
-  = [^0-9a-zA-Z,. \n]
-
-validInfixOperator
-  = first: symbol rest:symbol+ {
-      return [first].concat(rest).join("");
-  }
-  / first: symbolIncludingReserved rest:symbol* {
-      return rest ? [first].concat(rest).join("") : first;
-  }
-
 integer
   = first: [1-9] rest: digit* {
      return parseInt((rest ? [first].concat(rest) : [first]).join(""), 10);
@@ -420,7 +552,43 @@ float
   = digit "." digit+
   / integer "." digit+
 
-/* STRINGS AND CHARS */
+/* Symbols */
+symbolIncludingReserved
+  = [^0-9a-zA-Z,.-:= \n]
+
+symbol
+  = [^0-9a-zA-Z,. \n]
+
+/* Infix Operators and Functions */
+validInfixOperator
+  = first: symbol rest:symbol+ {
+      return [first].concat(rest).join("");
+  }
+  / first: symbolIncludingReserved rest:symbol* {
+      return rest ? [first].concat(rest).join("") : first;
+  }
+
+infixOperator
+  = operator: validInfixOperator {
+      return {
+        type : "InfixOperator",
+        value : operator
+      };
+  }
+
+guardedInfixOperator
+  = "(" operator: validInfixOperator ")" { return operator; }
+
+infixFunction
+  = "`" func: validVariableName "`" {
+      return {
+        type : "InfixFunction",
+        value : func
+      };
+  }
+
+
+/* Quotation for strings and chars */
 singleQuote
   = "'"
 
@@ -451,69 +619,10 @@ doubleQuotedString
       return string ? string.join("") : "";
   }
 
-/* LISTS */
-classicalList
-  = "[" whitespace* list: commaSeparatedExpressions? whitespace* "]" {
-      return {
-        type : "ListLiteral",
-        value : list ? list : []
-      };
-  }
-
-rangeList
-  = "[" whitespace* start: expression whitespace* ".." whitespace* end: expression whitespace* "]" {
-      return {
-        type : "RangeListLiteral",
-        value : {
-          start : start,
-          end : end
-        }
-      };
-  }
-
-list
-  = rangeList
-  / classicalList
-
-
-/* TUPLES */
-tuple
-  = "(" whitespace* tuple: commaSeparatedExpressions? whitespace* ")" {
-      return {
-        type : "TupleLiteral",
-        value : tuple ? tuple : []
-      };
-  }
-
-
-/* BINARY OPERATIONS */
-infixOperator
-  = operator: validInfixOperator {
-      return {
-        type : "InfixOperator",
-        value : operator
-      };
-  }
-
-guardedInfixOperator
-  = "(" operator: validInfixOperator ")" { return operator; }
-
-infixFunction
-  = "`" func: validVariableName "`" {
-      return {
-        type : "InfixFunction",
-        value : func
-      };
-  }
 
 
 
-
-
-
-
-
-/* IDENTIFIERS */
+/* Identifiers */
 validTypeName
   = first: upperCaseLetter rest: (lowerCaseLetter / upperCaseLetter / digit)*{
       return rest ? [first].concat(rest).join("") : first;
@@ -529,123 +638,52 @@ validFunctionName
   / validTypeName
   / guardedInfixOperator
 
-variableIdentifier
-  = variable: validVariableName {
-      return {
-        type : "VariableIdentifier",
-        value : variable
-      };
-  }
 
-typeConstructorIdentifier
-  = typeConstructor: validTypeName {
-      return {
-        type : "TypeConstructorIdentifier",
-        value : typeConstructor
-      };
-  }
 
-/* RECORDS */
-recordOperation
-  = key: validVariableName space* "=" space* value: expression {
+/* Types */
+validType
+  = guardedType
+  / extensibleRecordType
+  / recordType
+  / composedType
+  / functionType
+
+guardedType
+  = "(" whitespace* type: validType whitespace* ")" { return type; }
+
+extensibleRecordType
+  = "{" space* extension: validVariableName space* "|" space* properties: commaSeparatedRecordTypeProperties? whitespace* "}" {
       return {
-        type : "AssignRecordOperation",
+        type : "ExtensibleRecordType",
         value : {
-          key : key,
-          value : value
-        }
-      };
-  }
-  / key: validVariableName space* "<-" space* value: expression {
-      return {
-        type : "UpdateRecordOperation",
-        value : {
-          key : key,
-          value : value
+          properties : properties ? properties : [],
+          extension : extension
         }
       };
   }
 
-
-record
-  = "{" space* base: (validVariableName whitespace* "|")? space* operations: commaSeparatedRecordOperations? space* "}" {
+recordType
+  = "{" space* properties: commaSeparatedRecordTypeProperties? space* "}" {
       return {
-        type : "RecordLiteral",
+        type : "RecordType",
+        value : properties ? properties : []
+      };
+  }
+
+composedType
+  = typeConstructor: boundedType whitespace* args: spaceSeparatedTypeArguments {
+      return {
+        type : "ComposedType",
         value : {
-          base : base ? base[0] : {},
-          operations : operations ? operations : []
+          typeConstructor : typeConstructor,
+          arguments : args
         }
       };
   }
 
+functionType
+  = arrowSeparatedTypes
 
-/* VALUE LEVEL EXPRESSIONS */
-number
-  = float: float {
-      return {
-        type : "FloatLiteral",
-        value : parseFloat(float)
-      };
-  }
-  / integer: integer {
-      return {
-        type : "IntegerLiteral",
-        value : parseInt(integer, 10)
-      };
-  }
-
-string
-  = string: doubleQuotedString {
-      return {
-        type : "StringLiteral",
-        value : string
-      };
-  }
-
-char
-  = char: singleQuotedChar {
-      return {
-        type : "CharLiteral",
-        value : char
-      };
-  }
-
-
-lambda
-  = "(" space* "\\" args: spaceSeparatedVariables? space* "->" space* definition: expression {
-      return {
-        type : "LambdaExpression",
-        value : {
-          arguments : args ? args : [],
-          definition : definition
-        }
-      };
-  }
-
-
-
-
-guardedLiteral
-  = "(" whitespace* literal: literal whitespace* ")" { return literal; }
-
-
-literal
-  = guardedLiteral
-  / record
-  / list
-  / number
-  / string
-  / char
-  / variableIdentifier
-  / typeConstructorIdentifier
-  / tuple
-
-
-
-
-
-
-/* TYPES */
 boundedType
   = type: validTypeName {
       return {
@@ -662,68 +700,6 @@ unboundedType
       };
   }
 
-guardedType
-  = "(" whitespace* type: validType whitespace* ")" { return type; }
-
-composedType
-  = typeConstructor: boundedType whitespace* args: spaceSeparatedTypeArguments {
-      return {
-        type : "ComposedType",
-        value : {
-          typeConstructor : typeConstructor,
-          arguments : args
-        }
-      };
-  }
-
-
-recordTypeProperty
-  = key: validVariableName whitespace* ":" whitespace* value: validType {
-      return {
-        type : "RecordTypeProperty",
-        value : {
-          key : key,
-          value : value
-        }
-      };
-  }
-
-recordType
-  = "{" space* properties: commaSeparatedRecordTypeProperties? space* "}" {
-      return {
-        type : "RecordType",
-        value : properties ? properties : []
-      };
-  }
-
-extensibleRecordType
-  = "{" space* extension: validVariableName space* "|" space* properties: commaSeparatedRecordTypeProperties? whitespace* "}" {
-      return {
-        type : "ExtensibleRecordType",
-        value : {
-          properties : properties ? properties : [],
-          extension : extension
-        }
-      };
-  }
-
-validType
-  = guardedType
-  / extensibleRecordType
-  / recordType
-  / composedType
-  / functionType
-
-
-functionType
-  = arrowSeparatedTypes
-
-
-/* TYPE LEVEL EXPRESSIONS */
-
-validTypeArgument
-  = "(" whitespace* type: validUnionType whitespace* ")" { return type;}
-  / validType
 
 validUnionType
   = typeConstructor: validTypeName whitespace* args: spaceSeparatedTypeArguments? {
@@ -736,6 +712,9 @@ validUnionType
       };
   };
 
+validTypeArgument
+  = "(" whitespace* type: validUnionType whitespace* ")" { return type;}
+  / validType
 
 
 typeAnnotationDeclaration
@@ -750,7 +729,28 @@ typeAnnotationDeclaration
   }
 
 
-/* SEPARATED STUFF */
+
+recordTypeProperty
+  = key: validVariableName whitespace* ":" whitespace* value: validType {
+      return {
+        type : "RecordTypeProperty",
+        value : {
+          key : key,
+          value : value
+        }
+      };
+  }
+
+
+
+/*
+ * ===================
+ *  Recursion Helpers
+ * ===================
+ */
+
+
+/* Separated stuff (helpers for recursive rules) */
 commaSeparatedExpressions
   = first: expression whitespace* "," whitespace* rest: commaSeparatedExpressions {
       return rest ? [first].concat(rest) : [first];
@@ -876,7 +876,12 @@ commaSeparatedRecordOperations
       return [rest];
   }
 
-/* SPECIAL TOKENS / SYMBOLS */
+
+/*
+ * ================
+ *  Ignore / Space
+ * ================
+ */
 
 whitespace
   = " "
